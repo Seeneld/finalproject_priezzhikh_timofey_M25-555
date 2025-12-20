@@ -1,0 +1,9 @@
+.venv/
+dist/
+*.whl
+*.tar.gz
+__pycache__/
+*.pyc
+.ruff_cache/
+data/
+*.json

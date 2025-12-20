@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "finalproject-priezzhikh-timofey-m25-555"
+version = "0.1.0"
+description = ""
+authors = ["Timofey Priezzhikh"]
+readme = "README.md"
+
+packages = [
+    { include = "valutatrade_hub" },
+]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+prettytable = "^3.17.0"
+
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.14.5"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+project = "main:main"
