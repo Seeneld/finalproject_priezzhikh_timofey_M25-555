@@ -1,14 +1,11 @@
 import shlex
 
-from valutatrade_hub.core.usecases import UseCases, UserError
+from valutatrade_hub.core.usecases import UseCases
+from valutatrade_hub.core.exceptions import InsufficientFundsError, CurrencyNotFoundError, ApiRequestError, UserError
 
 
 # Глобальный экземпляр бизнес-логики
-_usecases = UseCases(
-    users_file='data/users.json',
-    portfolios_file='data/portfolios.json',
-    rates_file='data/rates.json'
-)
+_usecases = UseCases()
 
 
 def print_help_message() -> None:
@@ -136,6 +133,14 @@ def run_cli() -> None:
             else:
                 print(f"Неизвестная команда: {command}. Введите 'help'.")
 
+        except InsufficientFundsError as e:
+            print(f"Ошибка: {e}")
+        except CurrencyNotFoundError as e:
+            print(f"Ошибка: {e}")
+            print("Поддерживаемые валюты: USD, EUR, RUB, BTC, ETH. Введите 'help' для справки.")
+        except ApiRequestError as e:
+            print(f"Ошибка: {e}")
+            print("Повторите попытку позже или проверьте подключение к сети.")
         except UserError as e:
             print(f"Ошибка: {e}")
         except KeyboardInterrupt:
