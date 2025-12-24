@@ -1,8 +1,10 @@
 import shlex
+from datetime import datetime
 
 from valutatrade_hub.core.usecases import UseCases
 from valutatrade_hub.core.exceptions import InsufficientFundsError, CurrencyNotFoundError, ApiRequestError, UserError
-
+from valutatrade_hub.parser_service.updater import RatesUpdater
+from valutatrade_hub.parser_service.config import ParserConfig
 
 # Глобальный экземпляр бизнес-логики
 _usecases = UseCases()
@@ -15,10 +17,12 @@ def print_help_message() -> None:
 help
 register --username <имя> --password <пароль>
 login --username <имя> --password <пароль>
-show-portfolio [--base <валюта>]
-buy --currency <код> --amount <количество>
-sell --currency <код> --amount <количество>
+show-portfolio --base <валюта>
+buy --currency <валюта> --amount <количество>
+sell --currency <валюта> --amount <количество>
 get-rate --from <валюта> --to <валюта>
+update-rates --source <источник>
+show-rates --currency <валюта> --top <количество>
 exit
 """
     print(help_text.strip())
@@ -130,6 +134,28 @@ def run_cli() -> None:
                 message = _usecases.get_exchange_rate(from_curr, to_curr)
                 print(message)
 
+            elif command == "update-rates":
+                source = args.get("source")
+                try:
+                    print("Начало обновления курсов валют...")
+                    config = ParserConfig()
+                    updater = RatesUpdater(config)
+                    count = updater.run_update(source=source)
+                    print(f"Успешное обновление. Получено курсов: {count}. Последнее обновление: {datetime.now().strftime('%Y-%m-%dT%H:%M:%S')}")
+                except Exception as e:
+                    print(f"Ошибка при обновлении курсов: {e}")
+                    print("Проверьте подключение к сети и переменную EXCHANGERATE_API_KEY")
+            
+            elif command == "show-rates":
+                currency = args.get("currency")
+                top_n = args.get("top")
+                try:
+                    top_n = int(top_n) if top_n else None
+                except ValueError:
+                    raise UserError("'top' должен быть натуральным числом")
+                message = _usecases.show_rates(currency=currency, top_n=top_n)
+                print(message)
+
             else:
                 print(f"Неизвестная команда: {command}. Введите 'help'.")
 
@@ -137,7 +163,7 @@ def run_cli() -> None:
             print(f"Ошибка: {e}")
         except CurrencyNotFoundError as e:
             print(f"Ошибка: {e}")
-            print("Поддерживаемые валюты: USD, EUR, RUB, BTC, ETH. Введите 'help' для справки.")
+            print("Поддерживаемые валюты: USD, EUR, RUB, BTC, ETH, SOL. Введите 'help' для справки.")
         except ApiRequestError as e:
             print(f"Ошибка: {e}")
             print("Повторите попытку позже или проверьте подключение к сети.")

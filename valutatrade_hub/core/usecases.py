@@ -1,7 +1,7 @@
 import hashlib
 import secrets
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 
 from valutatrade_hub.core.models import User
 from valutatrade_hub.core.currencies import get_currency, CurrencyNotFoundError
@@ -63,30 +63,22 @@ class UseCases:
         if from_curr == to_curr:
             return 1.0
 
-        supported = ["USD", "EUR", "RUB", "BTC", "ETH"]
+        supported = ["USD", "EUR", "RUB", "BTC", "ETH", "SOL"]
         if from_curr not in supported or to_curr not in supported:
-            raise CurrencyNotFoundError(f"Валюта не поддерживается")
+            raise CurrencyNotFoundError("Валюта не поддерживается")
 
-        def to_usd(code: str, amount: float) -> float:
-            """Конвертация из указанной валюты в USD"""
+        def get_usd_rate(code: str) -> float:
             if code == "USD":
-                return amount
+                return 1.0
             pair = f"{code}_USD"
             if pair in rates:
-                return amount * rates[pair]["rate"]
+                return rates[pair]["rate"]
             raise UserError(f"Нет курса для {code} к USD")
 
-        def from_usd(code: str, usd_amount: float) -> float:
-            """Конвертация из USD в указанную валюту"""
-            if code == "USD":
-                return usd_amount
-            pair = f"{code}_USD"
-            if pair in rates:
-                return usd_amount / rates[pair]["rate"]
-            raise UserError(f"Нет курса от USD к {code}")
-
-        usd_value = to_usd(from_curr, 1.0)
-        return from_usd(to_curr, usd_value)
+        from_usd = get_usd_rate(from_curr)
+        to_usd = get_usd_rate(to_curr)
+        
+        return from_usd / to_usd
 
     def get_logged_in_user(self) -> User:
         """Получение текущего авторизованного пользователя"""
@@ -146,7 +138,7 @@ class UseCases:
         return f"Вы вошли как '{username}'"
 
     def show_portfolio(self, base: str = "USD") -> str:
-        """Отображение портфеля пользователя с конвертацией в базовую валюту"""
+        """Показ портфолио пользователя"""
         get_currency(base)
         user = self.get_logged_in_user()
         portfolio_data = self._get_portfolio_by_user_id(user.user_id)
@@ -156,25 +148,20 @@ class UseCases:
         base = base.upper()
         wallets = portfolio_data["wallets"]
         lines = []
-        total_usd = 0.0
+        total_in_base = 0.0
 
         for code, wallet in wallets.items():
             balance = wallet["balance"]
             if code == base:
                 converted = balance
-                usd_rate_base = self._get_exchange_rate(base, "USD") if base != "USD" else 1.0
-                total_usd += balance * usd_rate_base
             else:
                 try:
                     rate = self._get_exchange_rate(code, base)
                     converted = balance * rate
-                    usd_rate = self._get_exchange_rate(code, "USD")
-                    total_usd += balance * usd_rate
                 except (UserError, CurrencyNotFoundError):
                     converted = 0.0
             lines.append(f"- {code}: {balance:.4f} -> {converted:.2f} {base}")
-
-        total_in_base = total_usd / (self._get_exchange_rate("USD", base) if base != "USD" else 1.0)
+            total_in_base += converted
 
         result = f"Портфель пользователя '{user.username}' (база: {base}):\n"
         result += "\n".join(lines)
@@ -270,3 +257,51 @@ class UseCases:
             raise
         except Exception:
             raise UserError(f"Курс {from_curr}->{to_curr} недоступен. Повторите попытку позже.")
+        
+    def show_rates(self, currency: str = None, top_n: int = None) -> str:
+        """Возвращает форматированную строку с курсами из кеша"""
+        from valutatrade_hub.parser_service.config import ParserConfig
+        
+        try:
+            data = self.db.load_rates()
+        except Exception:
+            raise UserError("Локальный кеш курсов пуст. Выполните 'update-rates', чтобы загрузить данные.")
+
+        last_refresh = data.get("last_refresh", "неизвестно")
+        pairs = {k: v for k, v in data.items() if k != "last_refresh"}
+
+        if not pairs:
+            raise UserError("Локальный кеш курсов пуст. Выполните 'update-rates', чтобы загрузить данные.")
+
+        # Фильтрация по валюте
+        if currency:
+            cur = currency.upper()
+            filtered = {}
+            for pair in pairs:
+                from_curr, to_curr = pair.split("_", 1)
+                if from_curr == cur or to_curr == cur:
+                    filtered[pair] = pairs[pair]
+            if not filtered:
+                raise UserError(f"Курс для '{cur}' не найден в кеше.")
+
+        # Топ криптовалют
+        elif top_n is not None:
+            config = ParserConfig()
+            crypto_set = set(config.CRYPTO_CURRENCIES)
+            crypto_usd_pairs = {}
+            for pair, info in pairs.items():
+                if pair.endswith("_USD"):
+                    crypto_code = pair[:-4]
+                    if crypto_code in crypto_set:
+                        crypto_usd_pairs[pair] = info
+            sorted_items = sorted(crypto_usd_pairs.items(), key=lambda x: x[1]["rate"], reverse=True)
+            filtered = dict(sorted_items[:top_n])
+
+        # Без аргументов
+        else:
+            filtered = pairs
+
+        lines = [f"Курсы валют из кеша, последнее обновление: {last_refresh}:"]
+        for pair, info in filtered.items():
+            lines.append(f"- {pair}: {info['rate']:.2f}")
+        return "\n".join(lines)

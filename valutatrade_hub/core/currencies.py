@@ -115,6 +115,7 @@ SUPPORTED_CURRENCIES: Dict[str, Currency] = {
     "RUB": FiatCurrency("Russian Ruble", "RUB", "Russian Federation"),
     "BTC": CryptoCurrency("Bitcoin", "BTC", "SHA-256", 1.12e12),
     "ETH": CryptoCurrency("Ethereum", "ETH", "Ethash", 4.5e11),
+    "SOL": CryptoCurrency("Solana", "SOL", "Proof of History", 8.5e10),
 }
 
 
