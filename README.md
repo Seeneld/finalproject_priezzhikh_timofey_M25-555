@@ -23,16 +23,19 @@ make project
 
 ## Доступные команды:
 
-help                                                (вывод справки)
-register --username <имя> --password <пароль>       (регистрация пользователя)
-login --username <имя> --password <пароль>          (авторизация пользователя)
-show-portfolio --base <валюта>                      (портфолио пользователя)
-buy --currency <валюта> --amount <количество>       (купить валюту)
-sell --currency <валюта> --amount <количество>      (продать валюту)
-get-rate --from <валюта> --to <валюта>              (курс обмена валют)
-update-rates --source <источник>                    (обновить курсы обмена валют)
-show-rates --currency <валюта> --top <количество>   (курс валют в USD)
-exit                                                (выход из приложения)
+- help                                                (вывод справки)
+- register --username <имя> --password <пароль>       (регистрация пользователя)
+- login --username <имя> --password <пароль>          (авторизация пользователя)
+- show-portfolio --base <валюта>                      (портфолио пользователя) 
+- buy --currency <валюта> --amount <количество>       (купить валюту)
+- sell --currency <валюта> --amount <количество>      (продать валюту)
+- get-rate --from <валюта> --to <валюта>              (курс обмена валют)
+- update-rates --source <источник>                    (обновить курсы обмена валют)
+- show-rates --currency <валюта> --top <количество>   (курс валют в USD)
+- exit                                                (выход из приложения)
 
 Команды show-portfolio, buy, sell доступны только авторизованным пользователям
 Для команд show-portfolio, update-rates, show-rates аргументы указываются опционально
+
+## Демонстрация работы приложения
+![Image](https://github.com/user-attachments/assets/4fb2dbdc-1079-4dd8-8b0c-4f477fd27da0)
